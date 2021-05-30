@@ -10,6 +10,11 @@ defmodule ChatApp.Application do
     children = [
       # Starts a worker by calling: ChatApp.Worker.start_link(arg)
       # {ChatApp.Worker, arg}
+      {
+        DynamicSupervisor,
+        strategy: :one_for_one, name: ChatApp.ConnectionSupervisor
+      },
+      ChatApp.ConnectionManager
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
