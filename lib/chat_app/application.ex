@@ -14,7 +14,8 @@ defmodule ChatApp.Application do
         DynamicSupervisor,
         strategy: :one_for_one, name: ChatApp.ConnectionSupervisor
       },
-      ChatApp.ConnectionManager
+      ChatApp.ConnectionManager,
+      ChatApp.GUI
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

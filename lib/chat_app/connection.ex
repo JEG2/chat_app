@@ -1,6 +1,6 @@
 defmodule ChatApp.Connection do
   use GenServer, restart: :transient
-  alias ChatApp.{ConnectionManager, ConnectionSupervisor}
+  alias ChatApp.{ConnectionManager, ConnectionSupervisor, GUI}
 
   def listen(socket) do
     case DynamicSupervisor.start_child(
@@ -38,9 +38,7 @@ defmodule ChatApp.Connection do
         :ok
 
       _error ->
-        # FIXME
-        # GUI.mark_send_failure(ref)
-        IO.puts("Message #{inspect(ref)} failed to reach a participant.")
+        GUI.show_send_failure(ref)
     end
 
     {:noreply, socket}
@@ -58,9 +56,7 @@ defmodule ChatApp.Connection do
   def handle_info({:tcp, socket, message}, socket) do
     {name, content} = :erlang.binary_to_term(message)
     ConnectionManager.forward(message, self())
-    # FIXME
-    # GUI.receive(name, content)
-    IO.puts("#{name}:  #{content}")
+    GUI.show_chat_message(name, content)
     activate(self())
     {:noreply, socket}
   end

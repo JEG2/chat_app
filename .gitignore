@@ -25,3 +25,7 @@ chat_app-*.tar
 
 # Temporary files for e.g. tests
 /tmp
+
+# macOS specific files
+.DS_Store
+**/.DS_Store

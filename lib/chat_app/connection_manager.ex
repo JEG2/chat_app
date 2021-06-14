@@ -15,9 +15,7 @@ defmodule ChatApp.ConnectionManager do
   end
 
   def send_to_all(message) do
-    ref = make_ref()
-    GenServer.cast(__MODULE__, {:send_to_all, ref, message})
-    ref
+    GenServer.call(__MODULE__, {:send_to_all, message})
   end
 
   def forward(message, from) do
@@ -38,32 +36,28 @@ defmodule ChatApp.ConnectionManager do
     end
   end
 
-  def handle_call({:connect, host, port, name}, _from, state) do
+  def handle_call({:connect, host, port, name}, from, state) do
     case listen_to_connection(host, port) do
       :ok ->
-        {:reply, :ok, %__MODULE__{state | mode: :client, name: name}}
+        new_state = %__MODULE__{state | mode: :client, name: name}
+        handle_call({:send_to_all, :connected}, from, new_state)
+        {:reply, :ok, new_state}
 
       error ->
         {:reply, error, state}
     end
   end
 
-  def handle_call(:reset, _from, _state) do
-    for_active_connections(fn {:undefined, pid, :worker, [module]} ->
-      apply(module, :close, [pid])
-    end)
-
-    {:reply, :ok, %__MODULE__{}}
-  end
-
-  def handle_cast(
-        {:send_to_all, _ref, _message},
+  def handle_call(
+        {:send_to_all, _message},
+        _from,
         %__MODULE__{mode: :ready} = state
       ) do
-    {:noreply, state}
+    {:reply, nil, state}
   end
 
-  def handle_cast({:send_to_all, ref, message}, state) do
+  def handle_call({:send_to_all, message}, _from, state) do
+    ref = make_ref()
     prepared_message = :erlang.term_to_binary({state.name, message})
 
     for_active_connections(fn
@@ -74,7 +68,17 @@ defmodule ChatApp.ConnectionManager do
         :ok
     end)
 
-    {:noreply, state}
+    {:reply, {ref, state.name}, state}
+  end
+
+  def handle_call(:reset, from, state) do
+    handle_call({:send_to_all, :disconnected}, from, state)
+
+    for_active_connections(fn {:undefined, pid, :worker, [module]} ->
+      apply(module, :close, [pid])
+    end)
+
+    {:reply, :ok, %__MODULE__{}}
   end
 
   def handle_cast(
