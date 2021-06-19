@@ -14,7 +14,7 @@ defmodule ChatApp.Application do
         DynamicSupervisor,
         strategy: :one_for_one, name: ChatApp.ConnectionSupervisor
       },
-      ChatApp.ConnectionManager,
+      {ChatApp.ConnectionManager, ui: ChatApp.GUI},
       ChatApp.GUI
     ]
 
