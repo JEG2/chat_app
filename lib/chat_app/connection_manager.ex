@@ -61,7 +61,7 @@ defmodule ChatApp.ConnectionManager do
     case listen_to_connection(host, port, state.me) do
       :ok ->
         new_state = %__MODULE__{state | mode: :client, name: name}
-        send_now(:connected, new_state)
+        queue_all_sends(:connected, new_state)
         {:reply, :ok, new_state}
 
       error ->
@@ -70,12 +70,12 @@ defmodule ChatApp.ConnectionManager do
   end
 
   def handle_call({:send_to_all, message}, _from, state) do
-    result = send_now(message, state)
+    result = queue_all_sends(message, state)
     {:reply, result, state}
   end
 
   def handle_call(:reset, _from, state) do
-    send_now(:disconnected, state)
+    queue_all_sends(:disconnected, state)
 
     for_active_connections(fn {:undefined, pid, :worker, [module]} ->
       apply(module, :close, [pid])
@@ -88,7 +88,7 @@ defmodule ChatApp.ConnectionManager do
     if state.mode == :host do
       for_active_connections(fn
         {:undefined, pid, :worker, [Connection]} when pid != from ->
-          Connection.send(pid, message)
+          Connection.queue_send(pid, message)
 
         _listener_or_from ->
           :ok
@@ -133,14 +133,14 @@ defmodule ChatApp.ConnectionManager do
     end
   end
 
-  defp send_now(message, %__MODULE__{mode: mode} = state)
+  defp queue_all_sends(message, %__MODULE__{mode: mode} = state)
        when mode in ~w[host client]a do
     ref = make_ref()
     prepared_message = :erlang.term_to_binary({state.name, message})
 
     for_active_connections(fn
       {:undefined, pid, :worker, [Connection]} ->
-        Connection.send(pid, ref, prepared_message)
+        Connection.queue_send(pid, ref, prepared_message)
 
       _listener ->
         :ok
@@ -149,7 +149,7 @@ defmodule ChatApp.ConnectionManager do
     {ref, state.name}
   end
 
-  defp send_now(_message, _state), do: nil
+  defp queue_all_sends(_message, _state), do: nil
 
   defp for_active_connections(func) do
     ConnectionSupervisor

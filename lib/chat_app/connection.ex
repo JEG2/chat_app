@@ -21,12 +21,10 @@ defmodule ChatApp.Connection do
     GenServer.start_link(__MODULE__, [socket, manager])
   end
 
-  def send(connection, message) do
-    send(connection, nil, message)
-  end
+  def queue_send(connection, message), do: queue_send(connection, nil, message)
 
-  def send(connection, message_id, message) do
-    GenServer.cast(connection, {:send, message_id, message})
+  def queue_send(connection, message_id, message) do
+    GenServer.cast(connection, {:queue_send, message_id, message})
   end
 
   def close(connection), do: GenServer.cast(connection, :close)
@@ -40,7 +38,7 @@ defmodule ChatApp.Connection do
     {:noreply, state}
   end
 
-  def handle_cast({:send, message_id, message}, state) do
+  def handle_cast({:queue_send, message_id, message}, state) do
     case :gen_tcp.send(state.socket, message) do
       :ok ->
         :ok
