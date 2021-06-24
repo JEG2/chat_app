@@ -1,3 +1,3 @@
 # ChatApp
 
-https://speakerdeck.com/jeg2/leveling-up-in-elixir
+https://speakerdeck.com/jeg2/how-to-level-up-in-elixir
