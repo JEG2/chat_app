@@ -51,8 +51,7 @@ defmodule ChatApp.GUI do
   end
 
   def handle_cast({:show_chat_message, name, content}, state) do
-    append_text_with_font(state.chat, name, state.bold)
-    append_text(state.chat, ":  #{content}\n")
+    append_message(name, content, state)
     {:noreply, state}
   end
 
@@ -181,11 +180,8 @@ defmodule ChatApp.GUI do
     :wxFont.setWeight(bold, :wxe_util.get_const(:wxFONTWEIGHT_BOLD))
     italic = :wxe_util.get_const(:wxITALIC_FONT)
 
-    append_text_with_font(
-      chat,
-      "Commands:\n  /listen PORT NAME\n  /connect HOST PORT NAME\n  /quit\n",
-      italic
-    )
+    c = "Commands:\n  /listen PORT NAME\n  /connect HOST PORT NAME\n  /quit\n"
+    append_text_with_font(chat, c, italic)
 
     form = :wxPanel.new(controls)
     input = :wxTextCtrl.new(form, 2, style: @default)
@@ -249,13 +245,10 @@ defmodule ChatApp.GUI do
         message when byte_size(message) > 0 ->
           case ConnectionManager.send_to_all(message) do
             {ref, name} ->
-              handle_cast({:show_chat_message, name, message}, state)
+              append_message(name, message, state)
 
-              Map.put(
-                state.active_sends,
-                ref,
-                {message, System.monotonic_time(:second)}
-              )
+              now = System.monotonic_time(:second)
+              Map.put(state.active_sends, ref, {message, now})
 
             nil ->
               state.active_sends
@@ -341,6 +334,11 @@ defmodule ChatApp.GUI do
     append_text(ctrl, text)
     :wxTextAttr.setFont(style, :wxe_util.get_const(:wxNORMAL_FONT))
     :wxTextCtrl.setDefaultStyle(ctrl, style)
+  end
+
+  defp append_message(name, message, state) do
+    append_text_with_font(state.chat, name, state.bold)
+    append_text(state.chat, ":  #{message}\n")
   end
 
   defp quit(state) do
